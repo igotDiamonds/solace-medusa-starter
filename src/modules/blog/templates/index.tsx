@@ -17,6 +17,7 @@ import SkeletonBlogPosts from '@modules/skeletons/templates/skeleton-post-tile'
 import SkeletonProductsCarousel from '@modules/skeletons/templates/skeleton-products-carousel'
 import { Pagination } from '@modules/store/components/pagination'
 import StoreBreadcrumbs from '@modules/store/templates/breadcrumbs'
+import { getRegionId } from 'app/[countryCode]/(main)/getRegionId'
 
 import Filters from '../components/filters'
 import RefinementList from '../components/refinement-list'
@@ -41,8 +42,7 @@ export default async function BlogTemplate({
   countryCode: string
   recommendedProducts: StoreProduct[]
 }) {
-  const region = await getRegion(countryCode)
-  if (!region) notFound()
+  const regionId = await getRegionId()
 
   const orderBy = sortBy === 'asc' ? 'createdAt:asc' : 'createdAt:desc'
 
@@ -55,7 +55,7 @@ export default async function BlogTemplate({
     sortBy: orderBy,
     query,
     category: currentCategory,
-  })
+  }).catch((_e) => notFound())
 
   const totalPages = Math.ceil(count / POSTS_LIMIT)
   const pageNumber = page ? parseInt(page) : 1
@@ -75,18 +75,18 @@ export default async function BlogTemplate({
         <Heading as="h1" className="mt-4 text-4xl medium:text-5xl">
           Blog
         </Heading>
-        <Box className="mb-8 mt-6 grid grid-cols-12 medium:mb-16 medium:mt-12">
+        <Box className="grid grid-cols-12 mt-6 mb-8 medium:mb-16 medium:mt-12">
           <Box className="col-span-12 medium:col-span-3 medium:mb-10">
             <PostCount count={count} className="block medium:hidden" />
             <Filters data={categoryFilters} countryCode={countryCode} />
             {/* Mobile view */}
-            <Box className="z-30 mt-2 block medium:hidden">
+            <Box className="z-30 block mt-2 medium:hidden">
               <RefinementList options={blogSortOptions} sortBy={sortBy} />
             </Box>
           </Box>
           <Box className="col-span-12 space-y-12 medium:col-span-8 medium:col-start-5">
             {/* Desktop view */}
-            <Box className="hidden items-center justify-between medium:flex">
+            <Box className="items-center justify-between hidden medium:flex">
               <PostCount count={count} />
               <RefinementList options={blogSortOptions} sortBy={sortBy} />
             </Box>
@@ -116,7 +116,7 @@ export default async function BlogTemplate({
       <Suspense fallback={<SkeletonProductsCarousel />}>
         <ProductCarousel
           products={recommendedProducts}
-          regionId={region.id}
+          regionId={regionId}
           title="Recommended products"
         />
       </Suspense>

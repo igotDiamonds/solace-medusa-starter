@@ -16,6 +16,7 @@ import { ExploreBlog } from '@modules/home/components/explore-blog'
 import Hero from '@modules/home/components/hero'
 import { ProductCarousel } from '@modules/products/components/product-carousel'
 import SkeletonProductsCarousel from '@modules/skeletons/templates/skeleton-products-carousel'
+import { getRegionId } from './getRegionId'
 
 export const metadata: Metadata = {
   title: 'Solace Medusa Starter Template',
@@ -40,8 +41,9 @@ export default async function Home(props: {
   ])
 
   const region = await getRegion(countryCode)
+  const regionId = await getRegionId()
 
-  if (!products || !collectionsList || !region) {
+  if (!products || !collectionsList || !regionId) {
     return null
   }
 
@@ -75,7 +77,7 @@ export default async function Home(props: {
         <ProductCarousel
           testId="our-bestsellers-section"
           products={products}
-          regionId={region.id}
+          regionId={regionId}
           title="Our bestsellers"
           viewAll={{
             link: '/shop',

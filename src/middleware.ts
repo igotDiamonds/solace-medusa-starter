@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 
 import { HttpTypes } from '@medusajs/types'
 
+export enum CookieKeys {
+  MedusaRegionId = 'medusa_region_id',
+  MedusaCartId = '_medusa_cart_id',
+  MedusaOnboarding = '_medusa_onboarding',
+}
+
 const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
 const PUBLISHABLE_API_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
 const DEFAULT_REGION = process.env.NEXT_PUBLIC_DEFAULT_REGION || 'us'
@@ -92,13 +98,16 @@ export async function middleware(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const isOnboarding = searchParams.get('onboarding') === 'true'
   const cartId = searchParams.get('cart_id')
+
   const checkoutStep = searchParams.get('step')
-  const onboardingCookie = request.cookies.get('_medusa_onboarding')
-  const cartIdCookie = request.cookies.get('_medusa_cart_id')
+  const onboardingCookie = request.cookies.get(CookieKeys.MedusaOnboarding)
+  const cartIdCookie = request.cookies.get(CookieKeys.MedusaCartId)
+  const regionIdCookie = request.cookies.get(CookieKeys.MedusaRegionId)
 
   const regionMap = await getRegionMap()
 
   const countryCode = regionMap && (await getCountryCode(request, regionMap))
+  const region = regionMap.get(countryCode)
 
   const urlHasCountryCode =
     countryCode && request.nextUrl.pathname.split('/')[1].includes(countryCode)
@@ -125,20 +134,27 @@ export async function middleware(request: NextRequest) {
   if (!urlHasCountryCode && countryCode) {
     redirectUrl = `${request.nextUrl.origin}/${countryCode}${redirectPath}${queryString}`
     response = NextResponse.redirect(`${redirectUrl}`, 307)
+    response.cookies.set('medusa_country_code', countryCode)
   }
 
   // If a cart_id is in the params, we set it as a cookie and redirect to the address step.
   if (cartId && !checkoutStep) {
     redirectUrl = `${redirectUrl}&step=address`
     response = NextResponse.redirect(`${redirectUrl}`, 307)
-    response.cookies.set('_medusa_cart_id', cartId, { maxAge: 60 * 60 * 24 })
+    response.cookies.set(CookieKeys.MedusaCartId, cartId, {
+      maxAge: 60 * 60 * 24,
+    })
   }
 
   // Set a cookie to indicate that we're onboarding. This is used to show the onboarding flow.
   if (isOnboarding) {
-    response.cookies.set('_medusa_onboarding', 'true', {
+    response.cookies.set(CookieKeys.MedusaOnboarding, 'true', {
       maxAge: 60 * 60 * 24,
     })
+  }
+
+  if (!regionIdCookie) {
+    response.cookies.set(CookieKeys.MedusaRegionId, region.id)
   }
 
   return response
